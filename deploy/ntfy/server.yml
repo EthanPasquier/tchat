@@ -1,0 +1,20 @@
+base-url: "https://relay.tchat.187-124-38-234.sslip.io"
+listen-http: ":80"
+behind-proxy: true
+
+# Messages gardés 48 h pour rattraper ce qui arrive pendant que le Mac dort
+cache-file: "/var/cache/ntfy/cache.db"
+cache-duration: "48h"
+
+# Relais réservé à tchat : tout est interdit sauf les topics tc_* (ACL posée au déploiement)
+auth-file: "/var/lib/ntfy/user.db"
+auth-default-access: "deny-all"
+web-root: "disable"
+enable-signup: false
+enable-login: false
+
+keepalive-interval: "45s"
+visitor-request-limit-burst: 300
+visitor-request-limit-replenish: "2s"
+visitor-message-daily-limit: 0
+visitor-subscription-limit: 100

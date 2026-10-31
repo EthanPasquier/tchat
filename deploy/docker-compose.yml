@@ -1,0 +1,48 @@
+name: tchat
+# Déploiement sur le VPS (Traefik en réseau host, certificats Let's Encrypt).
+#   site  → https://tchat.187-124-38-234.sslip.io        (page + install.sh + tchat.tar.gz)
+#   relay → https://relay.tchat.187-124-38-234.sslip.io  (serveur ntfy perso, réservé aux salons tchat)
+services:
+  site:
+    build:
+      context: ..
+      dockerfile: deploy/site.Dockerfile
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.tchat.loadbalancer.server.port=8080
+      - traefik.http.routers.tchat.rule=Host(`tchat.187-124-38-234.sslip.io`)
+      - traefik.http.routers.tchat.entrypoints=websecure
+      - traefik.http.routers.tchat.tls.certresolver=letsencrypt
+      - traefik.http.routers.tchat.service=tchat
+
+  relay:
+    image: binwiederhier/ntfy:v2.11.0
+    command: serve
+    restart: unless-stopped
+    volumes:
+      - ./ntfy/server.yml:/etc/ntfy/server.yml:ro
+      - ntfy-cache:/var/cache/ntfy
+      - ntfy-lib:/var/lib/ntfy
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.tchat-relay.loadbalancer.server.port=80
+      - traefik.http.routers.tchat-relay.rule=Host(`relay.tchat.187-124-38-234.sslip.io`)
+      - traefik.http.routers.tchat-relay.entrypoints=websecure
+      - traefik.http.routers.tchat-relay.tls.certresolver=letsencrypt
+      - traefik.http.routers.tchat-relay.service=tchat-relay
+
+volumes:
+  ntfy-cache:
+  ntfy-lib:

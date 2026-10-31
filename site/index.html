@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tchat — la messagerie de ton terminal</title>
+<meta name="description" content="Parle avec tes potes sans quitter ton terminal. Chiffré de bout en bout, notifs en direct au-dessus de ton prompt, Ctrl+G pour ouvrir. Installation en une ligne.">
+<meta property="og:title" content="tchat — la messagerie de ton terminal">
+<meta property="og:description" content="Ctrl+G et tu parles à tes potes. Chiffré de bout en bout. Une ligne pour installer.">
+<meta name="theme-color" content="#0a0a10">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230a0a10'/><path d='M14 22l10 10-10 10' stroke='%23ff5fd2' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/><rect x='30' y='38' width='20' height='6' rx='3' fill='%238b7bff'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a10; --bg2:#0f0f18; --surface:#13131e; --surface2:#1a1a28; --line:#262638;
+  --text:#ecebf5; --muted:#9594ad; --dim:#5f5e78;
+  --pink:#ff5fd2; --violet:#8b7bff; --cyan:#5ee7ff; --green:#5af0a0; --yellow:#ffd36b; --red:#ff6b81;
+  --grad:linear-gradient(110deg,var(--pink),var(--violet) 55%,var(--cyan));
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Space Grotesk",system-ui,-apple-system,sans-serif;
+  --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+code,kbd,pre{font-family:var(--mono)}
+::selection{background:var(--pink);color:#000}
+
+/* fond : grille + halos */
+.bgfx{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.bgfx::before{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:56px 56px;opacity:.28;mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 30%,transparent 75%)}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.35}
+.orb.a{width:520px;height:520px;background:var(--pink);top:-180px;left:-120px;animation:float 18s ease-in-out infinite}
+.orb.b{width:600px;height:600px;background:var(--violet);top:-220px;right:-200px;animation:float 22s ease-in-out infinite reverse}
+@keyframes float{50%{transform:translate(60px,80px)}}
+
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+/* nav */
+nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:color-mix(in srgb,var(--bg) 70%,transparent);border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px;gap:16px}
+.logo{font-family:var(--mono);font-weight:700;font-size:20px;text-decoration:none;display:flex;align-items:center;gap:2px}
+.logo .p{color:var(--pink)}
+.logo .cur{display:inline-block;width:10px;height:20px;background:var(--violet);margin-left:4px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+nav ul{display:flex;gap:28px;list-style:none;font-size:15px}
+nav ul a{text-decoration:none;color:var(--muted);transition:color .2s}
+nav ul a:hover{color:var(--text)}
+.gh{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;text-decoration:none;font-size:14px;transition:border-color .2s,background .2s}
+.gh:hover{border-color:var(--violet);background:var(--surface)}
+.gh svg{width:18px;height:18px}
+
+/* hero */
+.hero{padding:88px 0 40px;display:grid;grid-template-columns:1fr 1.08fr;gap:56px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+h1{font-size:clamp(42px,6.2vw,76px);line-height:1.02;letter-spacing:-.035em;font-weight:700;margin:22px 0 22px}
+.g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:19px;color:var(--muted);max-width:520px}
+.lead b{color:var(--text);font-weight:500}
+
+.install{margin-top:34px}
+.label{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.cmd{position:relative;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 16px 16px 20px;font-family:var(--mono);font-size:14.5px;overflow:hidden}
+.cmd::before{content:"";position:absolute;inset:-1px;border-radius:15px;padding:1px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.7;pointer-events:none}
+.cmd .dollar{color:var(--pink);user-select:none}
+.cmd code{flex:1;white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+.cmd code::-webkit-scrollbar{display:none}
+.copy{flex:none;cursor:pointer;border:0;background:var(--surface2);color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 12px;border-radius:9px;transition:background .2s,transform .1s}
+.copy:hover{background:var(--line)}
+.copy:active{transform:scale(.96)}
+.copy.ok{background:var(--green);color:#04170c}
+.btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:13px 20px;border-radius:12px;font-weight:500;text-decoration:none;font-size:15px;transition:transform .15s,box-shadow .2s,background .2s}
+.btn.main{background:var(--text);color:var(--bg)}
+.btn.main:hover{transform:translateY(-2px);box-shadow:0 10px 30px -10px var(--pink)}
+.btn.ghost{border:1px solid var(--line);background:var(--surface)}
+.btn.ghost:hover{border-color:var(--violet);transform:translateY(-2px)}
+.btn svg{width:18px;height:18px}
+.req{margin-top:16px;font-size:13.5px;color:var(--dim);font-family:var(--mono)}
+
+/* terminal */
+.term{position:relative;border-radius:var(--r);background:#07070c;border:1px solid var(--line);box-shadow:0 40px 120px -40px rgba(139,123,255,.55),0 0 0 1px rgba(255,255,255,.02) inset;overflow:hidden}
+.term-bar{display:flex;align-items:center;gap:8px;padding:12px 14px;background:linear-gradient(#15151f,#101018);border-bottom:1px solid var(--line)}
+.term-bar i{width:12px;height:12px;border-radius:50%;display:block}
+.term-bar i:nth-child(1){background:#ff5f57}.term-bar i:nth-child(2){background:#febc2e}.term-bar i:nth-child(3){background:#28c840}
+.term-bar span{flex:1;text-align:center;font-family:var(--mono);font-size:12px;color:var(--dim);margin-right:44px}
+.screen{font-family:var(--mono);font-size:13.5px;line-height:1.75;padding:18px 20px;height:400px;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.screen .l{display:flex;justify-content:space-between;gap:12px;min-height:1.75em}
+.c-g{color:var(--green)}.c-p{color:var(--pink)}.c-v{color:var(--violet)}.c-c{color:var(--cyan)}.c-y{color:var(--yellow)}.c-d{color:var(--dim)}.c-m{color:var(--muted)}.b{font-weight:700}
+.caret{display:inline-block;width:8px;height:1.15em;vertical-align:-3px;background:var(--text);animation:blink 1s steps(1) infinite}
+.notif{animation:slidein .45s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes slidein{from{opacity:0;transform:translateY(-8px)}}
+.chathead{display:inline-block;background:var(--text);color:#07070c;padding:0 8px;margin-bottom:4px}
+.keyhint{position:absolute;right:16px;bottom:16px;display:flex;gap:6px;opacity:0;transform:translateY(8px) scale(.9);transition:all .3s}
+.keyhint.on{opacity:1;transform:none}
+kbd{display:inline-block;font-size:13px;padding:5px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);border-bottom-width:3px;color:var(--text)}
+.keyhint kbd{background:var(--pink);color:#1a0016;border-color:#c23c9f;font-weight:700;box-shadow:0 0 24px var(--pink)}
+
+/* sections */
+section{padding:110px 0 0}
+.kicker{font-family:var(--mono);font-size:13px;color:var(--pink);letter-spacing:.1em;text-transform:uppercase}
+h2{font-size:clamp(32px,4.4vw,52px);line-height:1.08;letter-spacing:-.03em;margin:12px 0 16px;font-weight:700}
+.sub{color:var(--muted);font-size:18px;max-width:620px}
+
+/* étapes */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px;counter-reset:s}
+.step{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:28px 24px 24px;transition:transform .25s,border-color .25s}
+.step:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--violet) 60%,var(--line))}
+.step::before{counter-increment:s;content:"0" counter(s);font-family:var(--mono);font-size:13px;color:var(--bg);background:var(--grad);padding:3px 9px;border-radius:999px;font-weight:700}
+.step h3{font-size:21px;margin:18px 0 8px;letter-spacing:-.01em}
+.step p{color:var(--muted);font-size:15px;margin-bottom:18px}
+.mini{display:flex;align-items:center;gap:8px;background:#07070c;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:var(--mono);font-size:13px;overflow:hidden}
+.mini code{flex:1;white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+.mini code::-webkit-scrollbar{display:none}
+.mini .copy{padding:5px 9px;font-size:12px}
+
+/* features */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px}
+.feat{background:linear-gradient(180deg,var(--surface),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:26px;position:relative;overflow:hidden}
+.feat.wide{grid-column:span 2}
+.feat .ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--surface2);border:1px solid var(--line);margin-bottom:18px;font-size:20px}
+.feat h3{font-size:19px;margin-bottom:6px;letter-spacing:-.01em}
+.feat p{color:var(--muted);font-size:15px}
+.feat .demo{margin-top:18px;background:#07070c;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.8;white-space:pre-wrap}
+
+/* schéma notifs */
+.flow{margin-top:48px;display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:14px}
+.node{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;text-align:center}
+.node .t{font-family:var(--mono);font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.node .n{font-size:18px;font-weight:700;margin:6px 0 4px}
+.node .d{color:var(--muted);font-size:14px}
+.arrow{font-family:var(--mono);font-size:12px;color:var(--pink);text-align:center;white-space:nowrap}
+.arrow svg{display:block;margin:6px auto 0;width:64px;height:12px}
+.dash{stroke-dasharray:6 6;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-12}}
+
+/* commandes */
+.cheat{margin-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px 0;overflow:hidden}
+.card h4{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);padding:14px 22px 8px}
+.row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;padding:11px 22px;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent);font-size:14.5px}
+.row code{color:var(--cyan);font-size:13.5px;overflow-wrap:anywhere}
+.row span{color:var(--muted)}
+
+/* FAQ */
+.faq{margin-top:40px;display:grid;gap:12px;max-width:860px}
+details{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 22px;transition:border-color .2s}
+details[open]{border-color:color-mix(in srgb,var(--violet) 55%,var(--line))}
+summary{cursor:pointer;list-style:none;padding:18px 0;font-weight:500;font-size:17px;display:flex;justify-content:space-between;gap:16px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--mono);color:var(--pink);font-size:22px;transition:transform .25s}
+details[open] summary::after{transform:rotate(45deg)}
+details p,details pre{color:var(--muted);padding-bottom:18px;font-size:15.5px}
+details pre{background:#07070c;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:18px;color:var(--text);font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+details code{color:var(--cyan);font-size:.92em}
+
+/* CTA */
+.cta{margin:120px 0 0;border-radius:24px;padding:64px 32px;text-align:center;background:radial-gradient(ellipse at top,color-mix(in srgb,var(--violet) 35%,transparent),transparent 70%),var(--surface);border:1px solid var(--line);position:relative;overflow:hidden}
+.cta h2{margin-top:0}
+.cta .cmd{max-width:640px;margin:28px auto 0;text-align:left}
+footer{padding:56px 0 48px;color:var(--dim);font-size:14px;font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+footer a{color:var(--muted);text-decoration:none}
+footer a:hover{color:var(--text)}
+
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr;padding-top:56px;gap:44px}
+  .steps,.grid{grid-template-columns:1fr}
+  .feat.wide{grid-column:auto}
+  .flow{grid-template-columns:1fr}
+  .arrow svg{transform:rotate(90deg);margin:10px auto}
+  .cheat{grid-template-columns:1fr}
+  nav ul{display:none}
+}
+@media (max-width:560px){
+  .wrap{padding:0 16px}
+  .screen{font-size:11.5px;height:360px;padding:14px}
+  .cmd{font-size:13px;padding:12px 12px 12px 14px}
+  .row{grid-template-columns:1fr;gap:2px}
+  section{padding-top:80px}
+  .cta{padding:44px 18px}
+  .btn{flex:1;justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="bgfx" aria-hidden="true"><div class="orb a"></div><div class="orb b"></div></div>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#" aria-label="tchat, accueil"><span class="p">~/</span>tchat<span class="cur"></span></a>
+    <ul>
+      <li><a href="#installer">Installer</a></li>
+      <li><a href="#fonctions">Fonctions</a></li>
+      <li><a href="#notifs">Les notifs</a></li>
+      <li><a href="#commandes">Commandes</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+    <a class="gh" href="https://github.com/EthanPasquier/tchat" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<main class="wrap">
+  <!-- HERO -->
+  <header class="hero" id="installer">
+    <div>
+      <span class="pill"><span class="dot"></span>chiffré de bout en bout · open source</span>
+      <h1>Tes potes,<br><span class="g">dans ton terminal.</span></h1>
+      <p class="lead">Un <b>Ctrl+G</b> et tu discutes, sans quitter ton shell. Les messages s’affichent <b>au-dessus de ton prompt</b>, même pendant que tu tapes. Ça marche entre n’importe quels réseaux.</p>
+
+      <div class="install">
+        <div class="label">Installer — une seule ligne</div>
+        <div class="cmd">
+          <span class="dollar">$</span>
+          <code id="one-liner">curl -fsSL https://tchat.187-124-38-234.sslip.io/install.sh | sh</code>
+          <button class="copy" data-copy="#one-liner">Copier</button>
+        </div>
+        <div class="btns">
+          <a class="btn main" href="/tchat.tar.gz" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 21h16"/></svg>
+            Télécharger le code
+          </a>
+          <a class="btn ghost" href="https://github.com/EthanPasquier/tchat" target="_blank" rel="noopener">Voir sur GitHub →</a>
+        </div>
+        <p class="req">macOS · Linux · WSL — il faut juste Node.js 18+</p>
+      </div>
+    </div>
+
+    <div class="term" role="img" aria-label="Démo : une notification tchat apparaît au-dessus du prompt pendant qu'on tape, puis Ctrl+G ouvre le chat">
+      <div class="term-bar"><i></i><i></i><i></i><span id="term-title">zsh — ~/projets/site</span></div>
+      <div class="screen" id="screen"></div>
+      <div class="keyhint" id="keyhint"><kbd>ctrl</kbd><kbd>G</kbd></div>
+    </div>
+  </header>
+
+  <!-- ÉTAPES -->
+  <section class="reveal">
+    <div class="kicker">// en 30 secondes</div>
+    <h2>Trois commandes, <span class="g">c’est tout.</span></h2>
+    <p class="sub">Pas de compte, pas d’email, pas de mot de passe. Un salon = un code secret que tu partages avec tes potes.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Installe</h3>
+        <p>Télécharge tchat, ajoute le raccourci et les notifs à ton shell.</p>
+        <div class="mini"><code id="s1">curl -fsSL https://tchat.187-124-38-234.sslip.io/install.sh | sh</code><button class="copy" data-copy="#s1">Copier</button></div>
+      </div>
+      <div class="step">
+        <h3>Crée un salon</h3>
+        <p>tchat te donne un code d’invitation. Envoie-le à tes potes par Discord, SMS…</p>
+        <div class="mini"><code id="s2">tchat new potes</code><button class="copy" data-copy="#s2">Copier</button></div>
+      </div>
+      <div class="step">
+        <h3>Ils rejoignent</h3>
+        <p>Ils collent la commande reçue. Ensuite tout le monde fait <kbd>Ctrl</kbd>+<kbd>G</kbd>.</p>
+        <div class="mini"><code>tchat join tc-eyJuIjoicG90ZXMi…</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FONCTIONS -->
+  <section id="fonctions" class="reveal">
+    <div class="kicker">// fonctions</div>
+    <h2>Pensé pour ceux qui<br>vivent dans le terminal.</h2>
+    <div class="grid">
+      <div class="feat wide">
+        <div class="ico">⚡</div>
+        <h3>Notifs en direct, au-dessus du prompt</h3>
+        <p>Un message arrive pendant que tu tapes une commande ? Il s’affiche au-dessus, ta ligne reste intacte. Un badge te montre les non-lus à droite du prompt.</p>
+        <div class="demo"><span class="c-p">💬 #potes</span> <span class="b">lucas</span>: quelqu’un a cassé la prod ?? 😭
+<span class="c-g">➜</span> <span class="c-c">site</span> git push --forc<span class="caret"></span>                 <span class="c-p">💬 1</span></div>
+      </div>
+      <div class="feat">
+        <div class="ico">⌨️</div>
+        <h3>Ctrl+G, n’importe quand</h3>
+        <p>Le chat s’ouvre en plein écran, comme vim. Tu quittes, ton terminal revient exactement comme avant — et ce que tu tapais aussi.</p>
+      </div>
+      <div class="feat">
+        <div class="ico">🔒</div>
+        <h3>Chiffré de bout en bout</h3>
+        <p>AES-256-GCM. Le serveur ne voit passer que du bruit : seuls ceux qui ont le code du salon peuvent lire.</p>
+      </div>
+      <div class="feat">
+        <div class="ico">🌍</div>
+        <h3>Marche partout</h3>
+        <p>4G, wifi de la fac, box de tes parents : tout passe en HTTPS sortant. Aucun port à ouvrir, aucune IP à échanger.</p>
+      </div>
+      <div class="feat">
+        <div class="ico">📬</div>
+        <h3>Rien ne se perd</h3>
+        <p>Ordi en veille ? Les messages sont gardés 48 h et arrivent dès que tu te reconnectes. Historique local illimité.</p>
+      </div>
+      <div class="feat wide">
+        <div class="ico">🪶</div>
+        <h3>Zéro dépendance, 100 % lisible</h3>
+        <p>~900 lignes de Node.js, aucune librairie npm. Tu peux tout lire avant de l’installer — et même héberger ton propre relais.</p>
+      </div>
+      <div class="feat">
+        <div class="ico">🔔</div>
+        <h3>Notif système en bonus</h3>
+        <p>Une notif macOS quand ton terminal n’est pas devant toi. <code>tchat notif off</code> pour la couper.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOTIFS -->
+  <section id="notifs" class="reveal">
+    <div class="kicker">// sous le capot</div>
+    <h2>L’astuce des notifs <span class="g">dans le shell.</span></h2>
+    <p class="sub">Un petit daemon écoute tes salons en arrière-plan. Chaque terminal zsh ouvert s’inscrit auprès de lui. Quand un message arrive :</p>
+    <div class="flow">
+      <div class="node"><div class="t">relais</div><div class="n">message chiffré</div><div class="d">poussé en streaming HTTPS</div></div>
+      <div class="arrow">déchiffre<svg viewBox="0 0 64 12" aria-hidden="true"><path class="dash" d="M0 6h56" stroke="currentColor" stroke-width="2"/><path d="M56 1l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+      <div class="node"><div class="t">daemon</div><div class="n">dépose + SIGUSR1</div><div class="d">dans la boîte de chaque shell</div></div>
+      <div class="arrow">signal<svg viewBox="0 0 64 12" aria-hidden="true"><path class="dash" d="M0 6h56" stroke="currentColor" stroke-width="2"/><path d="M56 1l6 5-6 5" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+      <div class="node"><div class="t">zsh</div><div class="n">TRAPUSR1 → zle -I</div><div class="d">affiche au-dessus, redessine ta ligne</div></div>
+    </div>
+    <p class="sub" style="margin-top:28px;font-size:16px">Si un programme plein écran tourne (vim, htop…), la notif attend sagement le prochain prompt pour ne rien casser. Sous bash, elles s’affichent au prompt suivant.</p>
+  </section>
+
+  <!-- COMMANDES -->
+  <section id="commandes" class="reveal">
+    <div class="kicker">// aide-mémoire</div>
+    <h2>Les commandes.</h2>
+    <div class="cheat">
+      <div class="card">
+        <h4>Dans le terminal</h4>
+        <div class="row"><code>tchat</code><span>ouvrir le chat (ou Ctrl+G)</span></div>
+        <div class="row"><code>tchat new &lt;salon&gt;</code><span>créer un salon + invitation</span></div>
+        <div class="row"><code>tchat join &lt;code&gt;</code><span>rejoindre un salon</span></div>
+        <div class="row"><code>tchat send potes "yo"</code><span>envoyer sans ouvrir le chat</span></div>
+        <div class="row"><code>tchat rooms</code><span>salons + non-lus</span></div>
+        <div class="row"><code>tchat invite potes</code><span>réafficher l’invitation</span></div>
+        <div class="row"><code>tchat update</code><span>mettre à jour</span></div>
+      </div>
+      <div class="card">
+        <h4>Dans le chat</h4>
+        <div class="row"><code>/r &lt;salon&gt;</code><span>changer de salon</span></div>
+        <div class="row"><code>/rooms</code><span>liste des salons</span></div>
+        <div class="row"><code>/invite</code><span>code d’invitation du salon</span></div>
+        <div class="row"><code>/new · /join · /leave</code><span>gérer les salons</span></div>
+        <div class="row"><code>/name &lt;pseudo&gt;</code><span>changer de pseudo</span></div>
+        <div class="row"><code>/notif on|off</code><span>notifs système</span></div>
+        <div class="row"><code>/quit</code><span>fermer (ou Ctrl+C)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="reveal">
+    <div class="kicker">// questions</div>
+    <h2>FAQ</h2>
+    <div class="faq">
+      <details>
+        <summary>Qu’est-ce qu’il me faut ?</summary>
+        <p>Node.js 18 ou plus (<code>brew install node</code> sur Mac, <code>sudo apt install nodejs</code> sous Linux) et un terminal avec zsh ou bash. Sous Windows, passe par WSL.</p>
+      </details>
+      <details>
+        <summary>Mes messages sont-ils privés ?</summary>
+        <p>Oui. Chaque salon a un secret aléatoire de 256 bits, contenu dans le code d’invitation. Il sert à chiffrer les messages (AES-256-GCM) avant qu’ils quittent ton ordi. Le relais ne voit que du chiffré. Par contre : toute personne qui a le code peut lire et écrire — ne le partage qu’avec tes potes.</p>
+      </details>
+      <details>
+        <summary>Pourquoi faut-il un serveur si c’est chiffré ?</summary>
+        <p>Pour que deux ordis sur des réseaux différents se trouvent sans ouvrir de ports. Le relais (un serveur ntfy) ne fait que passer les messages chiffrés. Tu peux aussi utiliser le tien : <code>tchat server https://ton-relais.exemple</code> avant de créer tes salons.</p>
+      </details>
+      <details>
+        <summary>Je peux changer le raccourci Ctrl+G ?</summary>
+        <p>Oui : ajoute <code>export TCHAT_KEY='^T'</code> dans ton <code>~/.zshrc</code>, avant la ligne <code>source</code> de tchat.</p>
+      </details>
+      <details>
+        <summary>Je préfère installer à la main.</summary>
+        <pre>git clone https://github.com/EthanPasquier/tchat.git ~/.tchat-app
+echo 'source ~/.tchat-app/shell/tchat.zsh' >> ~/.zshrc
+exec zsh</pre>
+      </details>
+      <details>
+        <summary>Comment désinstaller ?</summary>
+        <pre>tchat daemon stop
+rm -rf ~/.tchat-app ~/.tchat ~/.local/bin/tchat
+# puis retire la ligne « tchat » de ton ~/.zshrc ou ~/.bashrc</pre>
+      </details>
+    </div>
+  </section>
+
+  <div class="cta reveal">
+    <h2>Ouvre un terminal.<br><span class="g">Tes potes t’attendent.</span></h2>
+    <div class="cmd">
+      <span class="dollar">$</span>
+      <code id="one-liner-2">curl -fsSL https://tchat.187-124-38-234.sslip.io/install.sh | sh</code>
+      <button class="copy" data-copy="#one-liner-2">Copier</button>
+    </div>
+  </div>
+
+  <footer>
+    <span>tchat · fait avec ♥ dans un terminal</span>
+    <span><a href="https://github.com/EthanPasquier/tchat" target="_blank" rel="noopener">GitHub</a> · <a href="/install.sh">install.sh</a> · <a href="/tchat.tar.gz">tchat.tar.gz</a></span>
+  </footer>
+</main>
+
+<script>
+// Boutons « Copier »
+document.querySelectorAll('[data-copy]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const text = document.querySelector(btn.dataset.copy).textContent.trim();
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t);
+      t.select(); document.execCommand('copy'); t.remove();
+    }
+    const old = btn.textContent;
+    btn.textContent = 'Copié ✓'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = old; btn.classList.remove('ok'); }, 1600);
+  });
+});
+
+// Apparition au scroll
+const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
+document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+// Démo du terminal
+(() => {
+  const scr = document.getElementById('screen');
+  const title = document.getElementById('term-title');
+  const hint = document.getElementById('keyhint');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const PROMPT = '<span class="c-g">➜</span>  <span class="c-c">site</span> <span class="c-v">git:(</span><span class="c-p">main</span><span class="c-v">)</span> ';
+
+  let lines = [];
+  const render = () => { scr.innerHTML = lines.map((l) => `<div class="l ${l.cls || ''}"><span>${l.html}</span>${l.right ? `<span>${l.right}</span>` : ''}</div>`).join(''); };
+  const push = (html, extra = {}) => { lines.push({ html, ...extra }); render(); };
+  const promptLine = (typed = '', right = '', caret = true) => ({ html: PROMPT + esc(typed) + (caret ? '<span class="caret"></span>' : ''), right });
+
+  async function type(text, base = '', right = '') {
+    for (let i = 1; i <= text.length; i++) {
+      lines[lines.length - 1] = promptLine(base + text.slice(0, i), right);
+      render();
+      await sleep(45 + Math.random() * 70);
+    }
+  }
+
+  const NOTIF = '<span class="c-p b">💬 #potes</span> <span class="b">lucas</span>: on lance une game ce soir ? 🎮';
+  const BADGE = '<span class="c-p">💬 1</span>';
+  const t = (h, m) => `<span class="c-d">${h}:${m}</span>`;
+  const msg = (time, who, cls, text) => `${time} <span class="${cls} b">${who}</span> <span class="c-d">│</span> ${esc(text)}`;
+
+  function staticFrame() {
+    lines = [
+      { html: PROMPT + 'npm test' },
+      { html: '<span class="c-g">✓</span> 42 tests passés <span class="c-d">(1.2s)</span>' },
+      { html: NOTIF, cls: 'notif' },
+      promptLine('npm run d', BADGE),
+    ];
+    render();
+  }
+  if (reduce) return staticFrame();
+
+  async function loop() {
+    for (;;) {
+      title.textContent = 'zsh — ~/projets/site';
+      lines = [promptLine()];
+      render();
+      await sleep(700);
+      await type('npm test');
+      await sleep(350);
+      lines[lines.length - 1] = promptLine('npm test', '', false);
+      push('<span class="c-d">&gt; site@1.0.0 test</span>');
+      await sleep(500);
+      push('<span class="c-g">✓</span> 42 tests passés <span class="c-d">(1.2s)</span>');
+      push(promptLine().html);
+      await sleep(600);
+      await type('npm run d');
+      await sleep(700);
+      // la notif arrive pendant qu'on tape : affichée au-dessus, la ligne reste
+      lines.splice(lines.length - 1, 0, { html: NOTIF, cls: 'notif' });
+      lines[lines.length - 1] = promptLine('npm run d', BADGE);
+      render();
+      await sleep(2300);
+      hint.classList.add('on');
+      await sleep(900);
+      hint.classList.remove('on');
+
+      // le chat s'ouvre
+      title.textContent = 'tchat — #potes';
+      lines = [
+        { html: '<span class="chathead"> tchat · #potes · ethan · 2 salons </span> <span class="c-d">🔒 chiffré de bout en bout</span>' },
+        { html: '' },
+        { html: msg(t('20:58'), 'sarah', 'c-y', 'qui est chaud ce soir ?') },
+        { html: msg(t('21:04'), 'lucas', 'c-c', 'on lance une game ce soir ? 🎮') },
+        { html: '<span class="c-p">#potes</span> <span class="c-d">›</span> <span class="caret"></span>' },
+      ];
+      render();
+      await sleep(900);
+      const reply = 'grave, 21h30 ?';
+      for (let i = 1; i <= reply.length; i++) {
+        lines[lines.length - 1] = { html: `<span class="c-p">#potes</span> <span class="c-d">›</span> ${esc(reply.slice(0, i))}<span class="caret"></span>` };
+        render();
+        await sleep(55 + Math.random() * 60);
+      }
+      await sleep(400);
+      lines.splice(lines.length - 1, 1, { html: msg(t('21:04'), 'ethan', 'c-g', reply) }, { html: '<span class="c-p">#potes</span> <span class="c-d">›</span> <span class="caret"></span>' });
+      render();
+      await sleep(1300);
+      lines.splice(lines.length - 1, 0, { html: msg(t('21:05'), 'sarah', 'c-y', 'chaud 🔥 j’arrive'), cls: 'notif' });
+      render();
+      await sleep(1000);
+      lines.splice(lines.length - 1, 0, { html: '<span class="c-d">  ↳ #taf · </span><span class="c-v b">marie</span><span class="c-d">: la démo est à 10h demain</span>', cls: 'notif' });
+      render();
+      await sleep(1800);
+      for (const ch of ['/', '/q', '/qu', '/qui', '/quit']) {
+        lines[lines.length - 1] = { html: `<span class="c-p">#potes</span> <span class="c-d">›</span> ${ch}<span class="caret"></span>` };
+        render();
+        await sleep(110);
+      }
+      await sleep(500);
+
+      // retour au terminal : tout est comme avant, la commande en cours est rendue
+      title.textContent = 'zsh — ~/projets/site';
+      lines = [
+        { html: PROMPT + 'npm test' },
+        { html: '<span class="c-d">&gt; site@1.0.0 test</span>' },
+        { html: '<span class="c-g">✓</span> 42 tests passés <span class="c-d">(1.2s)</span>' },
+        { html: NOTIF },
+        promptLine('npm run d'),
+      ];
+      render();
+      await sleep(500);
+      await type('ev', 'npm run d');
+      await sleep(3000);
+    }
+  }
+  loop();
+})();
+</script>
+</body>
+</html>
