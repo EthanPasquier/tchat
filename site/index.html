@@ -454,7 +454,7 @@ document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
   const NOTIF = '<span class="c-p b">💬 #potes</span> <span class="b">lucas</span>: on lance une game ce soir ? 🎮';
   const BADGE = '<span class="c-p">💬 1</span>';
-  const t = (h, m) => `<span class="c-d">${h}:${m}</span>`;
+  const t = (hm) => `<span class="c-d">${hm}</span>`;
   const msg = (time, who, cls, text) => `${time} <span class="${cls} b">${who}</span> <span class="c-d">│</span> ${esc(text)}`;
 
   function staticFrame() {
