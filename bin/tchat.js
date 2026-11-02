@@ -18,6 +18,8 @@ const USAGE = `tchat — messagerie dans le terminal
   tchat leave <salon>          quitter un salon
   tchat name <pseudo>          changer de pseudo
   tchat notif on|off           notifs macOS on/off
+  tchat claude install         notifs dans Claude Code (barre d'état, messages, /tchat)
+  tchat claude uninstall       retirer l'intégration Claude Code
   tchat server <url>           serveur ntfy (défaut : ${S.DEFAULT_SERVER})
   tchat update                 mettre à jour tchat
   tchat daemon start|stop|status|log
@@ -95,6 +97,18 @@ async function main() {
     }
     case 'version': case '-v': case '--version':
       return console.log(require('../package.json').version);
+    case 'feed':
+      return require('../lib/claude').feed();
+    case 'claude': {
+      const C = require('../lib/claude');
+      const sub = args[0] || 'status';
+      if (sub === 'statusline') return C.statusline();
+      if (sub === 'hook') return C.hook();
+      if (sub === 'install') return C.install();
+      if (sub === 'uninstall') return C.uninstall();
+      if (sub === 'status') return C.status();
+      die('usage : tchat claude install|uninstall|status');
+    }
     case 'unread':
       return console.log(S.refreshUnread(cfg).total);
     case 'daemon': {

@@ -47,6 +47,23 @@ Un petit daemon (lancé automatiquement par ton shell) écoute tous tes salons. 
 
 Pas de notif pour le salon que tu as déjà ouvert dans le chat.
 
+## Dans Claude Code
+
+Quand tu codes avec Claude Code, ton prompt zsh n'est plus affiché : les notifs passent alors par
+Claude Code lui-même (branché automatiquement à l'installation si `~/.claude` existe, sinon
+`tchat claude install`) :
+
+1. **Barre d'état** : `💬 N non lus · #potes alex: on mange ?`, rafraîchie toutes les 2 s, même
+   quand Claude ne fait rien. Si tu avais déjà ta propre barre, elle reste affichée au-dessus.
+2. **Messages dans la conversation** : à chaque étape de Claude (outil utilisé, réponse finie,
+   prompt envoyé), les nouveaux messages s'affichent en entier. Ils sont pour toi seulement :
+   Claude ne les lit pas, zéro token consommé.
+3. **`/tchat`** : Claude résume les derniers messages ; `/tchat potes on arrive` envoie la réponse
+   (tel quel, Claude n'écrit jamais à ta place).
+
+`tchat claude status` pour vérifier, `tchat claude uninstall` pour tout retirer (ta config
+d'origine est remise, une copie est gardée dans `settings.json.avant-tchat`).
+
 ## Comment ça marche
 
 - Relais : un serveur [ntfy](https://ntfy.sh) (pub/sub HTTP) hébergé sur `relay.tchat.187-124-38-234.sslip.io`,

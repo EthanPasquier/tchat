@@ -203,6 +203,7 @@ footer a:hover{color:var(--text)}
       <li><a href="#installer">Installer</a></li>
       <li><a href="#fonctions">Fonctions</a></li>
       <li><a href="#notifs">Les notifs</a></li>
+      <li><a href="#claude">Claude Code</a></li>
       <li><a href="#commandes">Commandes</a></li>
       <li><a href="#faq">FAQ</a></li>
     </ul>
@@ -328,6 +329,19 @@ footer a:hover{color:var(--text)}
       <div class="node"><div class="t">zsh</div><div class="n">TRAPUSR1 → zle -I</div><div class="d">affiche au-dessus, redessine ta ligne</div></div>
     </div>
     <p class="sub" style="margin-top:28px;font-size:16px">Si un programme plein écran tourne (vim, htop…), la notif attend sagement le prochain prompt pour ne rien casser. Sous bash, elles s’affichent au prompt suivant.</p>
+  </section>
+
+  <!-- CLAUDE CODE -->
+  <section id="claude" class="reveal">
+    <div class="kicker">// tu codes avec Claude ?</div>
+    <h2>Les notifs marchent aussi <span class="g">dans Claude Code.</span></h2>
+    <p class="sub">Dans Claude Code, ton prompt zsh disparaît. tchat se branche donc directement dessus, tout seul à l’installation :</p>
+    <div class="flow">
+      <div class="node"><div class="t">barre d’état</div><div class="n">💬 2 · #potes alex: on mange ?</div><div class="d">rafraîchie toutes les 2 s</div></div>
+      <div class="node"><div class="t">conversation</div><div class="n">le message en entier</div><div class="d">affiché pendant que Claude bosse, pour toi seul</div></div>
+      <div class="node"><div class="t">/tchat</div><div class="n">lire et répondre</div><div class="d"><code>/tchat potes j’arrive</code></div></div>
+    </div>
+    <p class="sub" style="margin-top:28px;font-size:16px">Claude ne lit pas tes messages (zéro token) et n’envoie jamais rien à ta place. Ta barre d’état perso est gardée. <code>tchat claude uninstall</code> pour tout retirer.</p>
   </section>
 
   <!-- COMMANDES -->

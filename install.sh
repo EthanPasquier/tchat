@@ -46,6 +46,16 @@ if [ -r "$HOME/.tchat/daemon.pid" ] && kill -0 "$(cat "$HOME/.tchat/daemon.pid")
 fi
 node "$DEST/bin/tchat.js" daemon start
 
+# Claude Code : la plupart des devs codent dedans, le prompt zsh n'y est plus visible.
+# On branche les notifs sur sa barre d'état et ses hooks (retirer : tchat claude uninstall).
+if [ -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" ]; then
+  if node "$DEST/bin/tchat.js" claude install >/dev/null 2>&1; then
+    CLAUDE_OK=1
+  else
+    say "${d}→ Claude Code détecté mais son settings.json n'a pas pu être modifié : lance « tchat claude install ».${n}"
+  fi
+fi
+
 say "${g}✓ tchat $(node -p "require('$DEST/package.json').version") installé.${n}"
 say ""
 if [ -n "$RC" ]; then
@@ -55,3 +65,9 @@ else
 fi
 say "  2. ${b}tchat${n} ou ${b}Ctrl+G${n} pour ouvrir la messagerie"
 say "  3. ${b}tchat new potes${n} pour créer un salon, ou ${b}tchat join <code>${n}"
+if [ -n "${CLAUDE_OK:-}" ]; then
+  say ""
+  say "${m}Claude Code${n} : notifs branchées (barre d'état + messages dans la conversation)."
+  say "  Relance Claude Code, puis ${b}/tchat${n} pour lire, ${b}/tchat potes salut${n} pour répondre."
+  say "  ${d}Retirer : tchat claude uninstall${n}"
+fi

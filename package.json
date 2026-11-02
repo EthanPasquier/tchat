@@ -1,6 +1,6 @@
 {
   "name": "tchat",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Messagerie chiffrée de bout en bout dans le terminal, avec notifs directement dans zsh",
   "bin": { "tchat": "bin/tchat.js" },
   "engines": { "node": ">=18" },
